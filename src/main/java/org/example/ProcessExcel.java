@@ -4,6 +4,7 @@ import org.apache.poi.ss.usermodel.*;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -44,13 +45,13 @@ public class ProcessExcel {
     /**
      * Processes a list of file paths and returns a list of Department objects.
      *
-     * @param paths the list of file paths to process
+     * @param folder the folder containing the files to process
      * @return a list of Department objects
      * @throws RuntimeException if an error occurs while processing the workbooks
      */
-    List<Department> processData(List<String> paths) {
-        return paths.stream().map(path -> {
-            File file = new File(path);
+    List<Department> processData(File folder) {
+        File[] files = folder.listFiles();
+        return Arrays.stream(files).map(file -> {
             try {
                 Workbook workbook = WorkbookFactory.create(file);
                 if (!extractDean(workbook).contains("Глущенко"))
@@ -111,18 +112,23 @@ public class ProcessExcel {
     /**
      * Extracts the speciality name from the given workbook's sheet at index 0.
      *
-     * @param workbook the workbook object containing the sheet with speciality name
-     * @return the extracted speciality name as a String
+     * @param workbook The workbook object containing the sheet with the speciality name.
+     * @return The extracted speciality name as a String.
      */
     private String extractSpecialityName(Workbook workbook) {
         Sheet sheet = workbook.getSheetAt(0);
         StringBuilder specialityString = new StringBuilder();
+        String specialityRegex = "\"(.*?)\"";
+        Pattern pattern = Pattern.compile(specialityRegex);
         sheet.forEach(row -> row.forEach(cell -> {
             if (getCellValue(cell).contains(SPECIALITY)) {
-                specialityString.append(getCellValue(cell).substring(getCellValue(cell).indexOf(SPECIALITY)));
+                Matcher matcher = pattern.matcher(getCellValue(cell));
+                while (matcher.find()) {
+                    specialityString.append(matcher.group(1));
+                }
             }
         }));
-        return specialityString.toString().replace("\"", "");
+        return specialityString.toString().trim();
     }
 
     /**
